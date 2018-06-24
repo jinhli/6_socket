@@ -6,6 +6,13 @@
 import socket
 import os
 import subprocess
+import struct
+
+# res = struct.pack('i',128)
+# print(res,type(res),len(res))
+# obj =struct.unpack('i',res) #还有一个模式，“l”
+# print(obj[0])
+
 
 
 #1,实例化
@@ -32,10 +39,12 @@ while True:
             stdout = obj.stdout.read()
             stderr = obj.stderr.read()
         #制作固定长度的报头
+
         #把报头发给客户端
         #第一步：把数据的长度发给客户端
             data_size =len(stdout)+len(stderr)
-            conn.send(str(data_size).encode('utf-8'))
+            header= struct.pack('i',data_size)
+            conn.send(header)
             #返回结果给客户端
             conn.send(stdout)
             conn.send(stderr) #坑1
@@ -46,7 +55,5 @@ while True:
 #
     conn.close()
 phone.close()
-
-#
 
 
