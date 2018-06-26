@@ -4,6 +4,9 @@
 # Email: bonnie922713@126.com
 # Date: 6/15/18
 
-import json
+import os,sys
+
+res = hasattr(os, 'cd')
+
 
 

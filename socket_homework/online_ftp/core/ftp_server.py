@@ -14,11 +14,15 @@ import struct
 import json
 from core.md5_server import *
 
+
 server_dir = r'/home/bonnie/python_learning/pycharm_project/6_socket/socket_homework/online_ftp/conf/server/lili'
 phone = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 phone.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 phone.bind(('127.0.0.1', 8080))  # 0~65535, 0~1024 给操作系统用的
 phone.listen(5)  # 正常写配置文件， 挂起5次
+
+
+
 
 
 
