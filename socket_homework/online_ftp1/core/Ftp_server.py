@@ -16,7 +16,7 @@ import json
 import configparser
 from conf import *
 
-
+account = r'/root/PycharmProjects/6_socket/socket_homework/online_ftp1/conf/account.ini'
 class Ftp_server():
     def __init__(self, localip='127.0.0.1', port=8080):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -24,8 +24,8 @@ class Ftp_server():
         self.port = port
         self.server.bind((self.lip, self.port))
         self.server.listen(5)
-        self.server.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
-        conn, addr = self.server.accept()
+        self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.conn, self.addr = self.server.accept()
 
     def send_header(self, **kwargs):  # 报头发布信息，防止粘包
         """
@@ -33,6 +33,7 @@ class Ftp_server():
         :param kwargs: 字典
         :return:
         """
+
         header_dic = {}
         for key, value in kwargs.items():
             header_dic[key] = value
@@ -58,7 +59,7 @@ class Ftp_server():
         :param msg:
         :return:
         """
-        self.send_header(self, size=len(msg))
+        self.send_header(size=len(msg))
         self.conn.send(msg)
 
     @staticmethod
@@ -112,10 +113,11 @@ if header_dict['cmd'] == 'login':
     password = header_dict['password']
     msg, home_dir = Ftp_server.login_verify(name, password)
     if home_dir:
-        Ftp_server.send_message(msg)
+        print(msg)
+        ftp_server.send_message(msg)
         # 调用 cmd 处理命令，cd 到home 目录
     else:
-        Ftp_server.send_message(msg)
+        ftp_server.send_message(msg)
 
 if header_dict['cmd'] == 'get':
     pass
