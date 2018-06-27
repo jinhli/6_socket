@@ -22,10 +22,6 @@ phone.bind(('127.0.0.1', 8080))  # 0~65535, 0~1024 给操作系统用的
 phone.listen(5)  # 正常写配置文件， 挂起5次
 
 
-
-
-
-
 def write_file(filename,total_size):
     """
 

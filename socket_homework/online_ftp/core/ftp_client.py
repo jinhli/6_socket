@@ -99,7 +99,7 @@ while True:
     phone.send(cmd.encode('utf-8'))
     cmd = cmd.split()
     if cmd[0] == 'get':
-        original_md5,file_path = downLoadfromServer()
+        original_md5, file_path = downLoadfromServer()
         new_md5 = get_md5(file_path)
         if new_md5 == original_md5:
             print('The file you download is the same as it in the server')

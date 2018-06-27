@@ -58,6 +58,7 @@ class Ftp_client():
         self.server.send(header_bytes)  # 再发报头，告诉客户端数据长度
 
 
+
 ftp_client = Ftp_client()
 ftp_client.send_cmd()
 ftp_client.close()

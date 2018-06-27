@@ -13,7 +13,7 @@ phone.connect(('127.0.0.1', 8080)) #0~65535, 0~1024 给操作系统用的
 while True:
     #1.发命令
     cmd = input('input your message>>:').strip()
-    if not cmd: continue
+
     phone.send(cmd.encode('utf-8'))
 
     #以写的方式打开一个新文件，把收到的内容复印到文件

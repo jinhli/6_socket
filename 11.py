@@ -4,9 +4,14 @@
 # Email: bonnie922713@126.com
 # Date: 6/15/18
 
-import os,sys
+def send_header(**kwargs):  # 报头发布信息，防止粘包
+    header_dic = {}
+    for key, value in kwargs.items():
+        header_dic[key] = value
+    return header_dic
 
-res = hasattr(os, 'cd')
 
+
+res = send_header(filename ='bonnie', size=10)
 
 
