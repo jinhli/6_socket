@@ -1,0 +1,9 @@
+
+#不是一个send 对应一个recv,一方可以不断的发，另一方可以收一次
+#Recv
+    #wait data 耗时长
+    #copy data
+#Send
+    #只要 copy data
+
+TCP 协议， 传输控制协议， 面向连接的，面向流，提供可靠性服务
