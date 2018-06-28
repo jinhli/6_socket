@@ -4,9 +4,12 @@
 # Email: bonnie922713@126.com
 # Date: 6/26/18
 
-import os
+
+from os import path, getcwd
 from sys import path as sys_path
-sys_path.insert(0,os.path.dirname(os.getcwd()))
+sys_path.insert(0,path.dirname(getcwd()))
+BASE_DIR = path.dirname(path.dirname(path.abspath(__file__)))
+HOME_DIR= r'%s/conf/server' %BASE_DIR
 
 import socket
 import subprocess
@@ -16,7 +19,7 @@ import json
 import configparser
 from conf import *
 
-account = r'/root/PycharmProjects/6_socket/socket_homework/online_ftp1/conf/account.ini'
+account = r'/home/bonnie/python_learning/pycharm_project/6_socket/socket_homework/online_ftp1/conf/account.ini'
 class Ftp_server():
     def __init__(self, localip='127.0.0.1', port=8080):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -60,10 +63,9 @@ class Ftp_server():
         :return:
         """
         self.send_header(size=len(msg))
-        self.conn.send(msg)
+        self.conn.send(msg.encode('utf-8'))
 
-    @staticmethod
-    def login_verify(name, password):
+    def login_verify(self, name, password):
         """
         从account里读取文件内容，并进行验证
         :param name:
@@ -73,16 +75,26 @@ class Ftp_server():
         config = configparser.ConfigParser()  # 实例化一个对象
         config.read(account)  # 打开文件 account.ini，保存了用户信息
         res = config.sections()  # 获得section列表
+        print(res)
         if name in res:
             if config[name]['password'] == password:
                 home_dir = config[name]['home']
+                home_dir = '%s/%s' %(HOME_DIR,home_dir)
                 msg = 'login successfully'
-                return msg, home_dir  # 登陆成功，直接cd 到home目录
+                cmd = 'ls %s' % home_dir
+                obj = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                stdout = obj.stdout.read()
+                stderr = obj.stderr.read()
+                data_size = len(stdout) + len(stderr)
+                self.send_header(size=data_size)
+                self.conn.send(stdout)
+                self.conn.send(stderr)
+
             else:
                 msg = 'password is not correct'
         else:
             msg = 'there is no the account here'
-        return msg
+        self.send_message(msg)
 
     def handle_cmd(self):
         """
@@ -107,28 +119,23 @@ class Ftp_server():
 
 
 ftp_server = Ftp_server()
-header_dict = ftp_server.recv_header()
-if header_dict['cmd'] == 'login':
-    name = header_dict['name']
-    password = header_dict['password']
-    msg, home_dir = Ftp_server.login_verify(name, password)
-    if home_dir:
-        print(msg)
-        ftp_server.send_message(msg)
-        # 调用 cmd 处理命令，cd 到home 目录
+while True:
+    header_dict = ftp_server.recv_header()
+    if header_dict['cmd'] == 'login':
+        name = header_dict['name']
+        password = header_dict['password']
+        print(name,password)
+        ftp_server.login_verify(name, password)
+    if header_dict['cmd'] == 'get':
+        pass
+    elif header_dict['cmd'] == 'upload':
+        pass
+    elif header_dict['cmd'] == 'q':
+        exit()
     else:
-        ftp_server.send_message(msg)
+        pass    #执行命令操作
+# ftp_server.conn.close()
 
-if header_dict['cmd'] == 'get':
-    pass
-elif header_dict['cmd'] == 'upload':
-    pass
-elif header_dict['cmd'] == 'q':
-    exit()
-else:
-    pass    #执行命令操作
-
-ftp_server.close()
 
 
 

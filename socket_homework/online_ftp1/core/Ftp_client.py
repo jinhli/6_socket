@@ -64,7 +64,7 @@ class Ftp_client():
             recv_data += res
             recv_size += len(res)
 
-        print('stout 1--->', recv_data.decode('utf-8'))
+        print('stout 1--->', recv_data.decode('utf-8')) # 优化下 就可以仿照登陆用户的组目录显示 [bonnie@bonnie]>>
 
     def login_server(self):  #发报头过去
         while True:
@@ -82,4 +82,3 @@ class Ftp_client():
 
 ftp_client = Ftp_client()
 ftp_client.login_server()
-ftp_client.close()
