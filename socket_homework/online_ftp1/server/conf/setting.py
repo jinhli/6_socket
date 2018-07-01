@@ -9,5 +9,10 @@ from sys import path as sys_path
 sys_path.insert(0,path.dirname(getcwd()))
 
 BASE_DIR = path.dirname(path.dirname(path.abspath(__file__))) #整个程序的主目录
+HOME_DIR= r'%s/conf/server' %BASE_DIR
 
 account = r'%s/conf/account.ini' %BASE_DIR
+
+ADDR = '127.0.0.1'
+PORT = 8081
+MAX_SOCKET_LISTEN = 5
