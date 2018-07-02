@@ -46,24 +46,47 @@
 # #
 # # if __name__== '__main__':
 # #     client = FtpClient()
-# #     client.interactive() #交互
+# # #     client.interactive() #交互
+#
+# username = 'bonnie'
+# password = '13334'
+# cmd = {
+#     'action_type': 'auth',
+#     'username': username,
+#     'password': password
+# }
+#
+#
+# def send_header(**kwargs):  # 报头发布信息，防止粘包
+#     """
+#     发送报头
+#     :param kwargs: 字典
+#     :return:
+#     """
+#     header_dic = kwargs
+#     print(header_dic)
+#
+# send_header(username=username, password=password, action_type='auth')
 
-username = 'bonnie'
-password = '13334'
-cmd = {
-    'action_type': 'auth',
-    'username': username,
-    'password': password
-}
+# import configparser
+#
+# account = r'/home/bonnie/python_learning/pycharm_project/6_socket/socket_homework/online_ftp1/server/conf/account.ini'
+# config = configparser.ConfigParser()  # 实例化一个对象
+# config.read(account)  # 打开文件 account.ini，保存了用户信息
+# # config.sections()
+#
+#
+# res = config.get('lili', 'password')
+# print(res)
 
 
-def send_header(**kwargs):  # 报头发布信息，防止粘包
-    """
-    发送报头
-    :param kwargs: 字典
-    :return:
-    """
-    header_dic = kwargs
-    print(header_dic)
+import os
 
-send_header(username=username, password=password, action_type='auth')
+home_dir = r'/home/bonnie/python_learning/pycharm_project/6_socket/socket_homework/online_ftp1/server/home/server/bonnie/3.pdf'
+
+home_dir2= r'/home/bonnie/python_learning/pycharm_project/6_socket/socket_homework/online_ftp1/server/home/bonnie/3.pdf'
+
+if os.path.exists(home_dir):
+    print(1)
+else:
+    print(2)

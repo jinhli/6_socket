@@ -10,12 +10,12 @@ import os
 from sys import path as sys_path
 sys_path.insert(0,os.path.dirname(os.getcwd()))
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) #整个程序的主目录
-HOME_DIR= r'%s/home/' %BASE_DIR
+HOME_DIR = r'%s/client/home/' % BASE_DIR
 import socket
 import struct
 import json
 import optparse
-from md5_client import *
+from client.md5_client import *
 
 """"
 python ftp_client -h ip -P 8080 """ # 运行格式
@@ -38,7 +38,7 @@ class Ftp_client():
 
     def make_connection(self):
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client.connect((self.options.server,self.options.port))
+        self.client.connect((self.options.server, self.options.port))
 
     def auth(self):
         count = 0
@@ -96,7 +96,7 @@ class Ftp_client():
                 return False
         if exact_args:
             if exact_args != len(args):
-                print('require % parameters but %s received' %(exact_args,len(args)))
+                print('require % parameters but %s received' % (exact_args, len(args)))
                 return False
         return True
 
@@ -106,19 +106,21 @@ class Ftp_client():
         下载文件到客户端
         :return: MD5
         """
-        if self.parameter_check(cmd_args, min_args=1):
+        if self.parameter_check(cmd_args, exact_args=1):
             filename = cmd_args[0]
-            action_type ='get'
-            self.send_header(action_type,filename=filename,)  # 把要下载的命令和文件发送到服务器
+            action_type = 'get'
+            self.send_header(action_type, filename=filename,)  # 把要下载的命令和文件发送到服务器
             response = self.recv_message()  # 接收服务器发过来的信息
             if response.get('status_code') == 300:  # 接收到状态码 300， 表明文件存在
-                self.write_file(response)
+                self.write_file(response, filename)
+                original_md5 = response.get('md5')
+                # home_dir = '%s%s' % (HOME_DIR, filename)  # 绝对路径
+                self.verify_md5(filename, original_md5)
+
             else:
                 print(response.get('status_msg'))
 
             # self.print_data()  #
-
-
 
     def _put(self,cmd_args):
         """
@@ -127,42 +129,24 @@ class Ftp_client():
         """
 
         if self.parameter_check(cmd_args, min_args=1):
-            action_type ='put'
+            action_type = 'put'
             _filename = cmd_args[0]
-            filename_path = r'%s/%s' % (HOME_DIR, _filename)
-            if os.path.exists(filename_path):
-                file_md5 = get_md5()
+            filename_path = _filename
+            # filename_path = r'%s%s' % (HOME_DIR, _filename)
+            if os.path.exists(filename_path):   # 扩展 如果输入的是个绝对路径，要取出文件名
+                file_md5 = get_md5(filename_path)
                 file_size = os.path.getsize(filename_path)
-                self.send_message(action_type,filename=_filename, md5=file_md5, size=file_size)
+                self.send_header(action_type, filename=_filename, md5=file_md5, size=file_size)
                 with open(filename_path, 'rb') as f:
                     for line in f:
-                        self.conn.send(line)
-                response =self.recv_message()  # 接受上传成功的消息
+                        self.client.send(line)
+                response = self.recv_message()  # 接受上传成功的消息
                 if response.get('status_code') == 400:  # 接受状态码400，表示上传成功
                     print(response.get('status_msg'))
                 else:
                     print(response.get('status_msg'))
             else:
-                print('%s does not exist, please check %s file_path is right' %(_filename,filename_path))
-
-
-
-
-        filename = cmd[1]
-        filename_path = r'%s/%s' % (client_dir, filename)  # file path in the server
-        md5 = get_md5(filename_path)
-        header_dic = {
-            "filename": filename,
-            'md5': md5,
-            "total_size": os.path.getsize(filename_path)
-        }
-        header_json = json.dumps(header_dic)
-        header_bytes = header_json.encode('utf-8')
-        .send(struct.pack('i', len(header_bytes)))  # 发一个报头长度
-        phone.send(header_bytes)  # 再发报头，告诉客户端数据长度
-        with open(filename_path, 'rb') as f:
-            for line in f:
-                phone.send(line)
+                print('%s does not exist, please check %s file_path is right' % (_filename,filename_path))
 
     def send_header(self, action_type, **kwargs):  # 报头发布信息，防止粘包
         """
@@ -189,13 +173,13 @@ class Ftp_client():
         header_dict = json.loads(data)
         return header_dict
 
-    def write_file(self,header_dict):
+    def write_file(self, header_dict, filename):
         """
         保存文件
         :param filename:
         :return:
         """
-        filename = header_dict.get('filename')
+
         total_size = header_dict.get('size')
         with open(filename, 'wb') as f:
             recv_size = 0
@@ -205,7 +189,7 @@ class Ftp_client():
                 recv_size += len(line)
                 print('总大小：%s 已下载大小：%s' % (total_size, recv_size))
 
-    def print_data(self,header_dict):
+    def print_data(self, header_dict):
         """
         处理收到到数据，主要是命令行返回的数据
         :param header_dict:
@@ -221,7 +205,20 @@ class Ftp_client():
 
         print('[%s]>>: % self.username>>', '\n'+ recv_data.decode('utf-8')) # 优化下 就可以仿照登陆用户的组目录显示 [bonnie@bonnie]>>
 
+    def verify_md5(self, file_path, original_md5):
+        """
+        上传文件MD5 验证
+        :param file_path:
+        :param original_md5:  # 客户端传过来的MD5
+        :return:
+        """
+        new_md5 = get_md5(file_path)
+        print(new_md5, original_md5)
+        if new_md5 == original_md5:
+            print('md5 check successfully for %s' % file_path)  # MD5 检测成功
 
+        else:
+            print('md5 check failed for %s' % file_path) # MD5 检测失败
 
 
 

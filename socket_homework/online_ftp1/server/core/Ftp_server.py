@@ -17,18 +17,22 @@ import json
 import hashlib
 import configparser
 from conf import setting
-from conf.md5_server import get_md5
+from core.md5_server import get_md5
 
 class Ftp_server():
     STATUS_CODE ={
-        200:'Account authentication',
-        201:'wrong username or password',
+        200: 'Account authentication',
+        201: 'wrong username or password',
         301: 'File does not exist',
-        300:'File exists',
-        400:'upload successfully',
-        401:'upload file failed'
+        300: 'File exists',
+        400: 'upload successfully',
+        401: 'upload file failed',
+        500: 'MD5 check successfully',
+        501: 'MD5 check failed'
+
 
     }
+
     def __init__(self, management_instance):
         self.management_instance = management_instance
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -36,6 +40,7 @@ class Ftp_server():
         self.server.listen(setting.MAX_SOCKET_LISTEN)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.accounts = self.load_accouts()
+        self.name = None  # 登陆用户的用户名
 
     def start_server(self):
         """
@@ -69,8 +74,7 @@ class Ftp_server():
                 else:
                     print('invalid command')
 
-
-    def send_message(self,status_code, *args, **kwargs):  # 报头发布信息，防止粘包
+    def send_message(self, status_code,  *args, **kwargs):  # 报头发布信息，防止粘包
         """
         发送报头
         :param kwargs: 字典
@@ -84,7 +88,6 @@ class Ftp_server():
         header_bytes = header_json.encode('utf-8')
         self.conn.send(struct.pack('i', len(header_bytes)))  # 发一个报头长度
         self.conn.send(header_bytes)
-
 
     def recv_header(self):
         """
@@ -100,8 +103,6 @@ class Ftp_server():
         else:
             return False
 
-
-
     def load_accouts(self):
         """
         加载所有的账号信息
@@ -109,9 +110,9 @@ class Ftp_server():
         """
         config = configparser.ConfigParser()  # 实例化一个对象
         config.read(setting.account)  # 打开文件 account.ini，保存了用户信息
-        return config # 获得section列表
+        return config  # 获得配置文件实例
 
-    def authenticate(self,username, password):
+    def authenticate(self, username, password):
         """
         用户认证方法
         :param username:
@@ -127,16 +128,17 @@ class Ftp_server():
             if md5_password == _password:
                 home_dir = self.accounts[username]['home']
                 home_dir = '%s/%s' % (setting.HOME_DIR, home_dir)
+                self.name = username
                 # # msg = 'login successfully'
                 # # cmd = 'ls %s' % home_dir
                 # # self.handle_cmd(cmd)
                 print(home_dir)
                 return True
             else:
-                msg = 'password is not correct'
+                # msg = 'password is not correct'
                 return False
         else:
-            msg = 'there is no the account here'
+            # msg = 'there is no the account here'
             return False
         # self.send_message(msg)
 
@@ -147,7 +149,7 @@ class Ftp_server():
         :param password:
         :return:
         """
-        if self.authenticate(data.get('username'),data.get('password')):
+        if self.authenticate(data.get('username'), data.get('password')):
 
             print('auth pass')
             self.send_message(200)
@@ -170,18 +172,18 @@ class Ftp_server():
         :return:
         """
         _filename = data.get('filename')
-        home_dir = r'%s/%s' %(setting.HOME_DIR, self.accounts.get('home'))
+        home_dir = r'%s/%s' % (setting.HOME_DIR, self.accounts.get(self.name, 'home'))
         filename_path = r'%s/%s' % (home_dir, _filename)
+        print('server home dir --> %s' % filename_path)
         if path.exists(filename_path):
-            file_md5 = get_md5()
+            file_md5 = get_md5(filename_path)
             file_size = path.getsize(filename_path)
-            self.send_message(300,md5=file_md5,size=file_size)
+            self.send_message(300, md5=file_md5, size=file_size)
             with open(filename_path, 'rb') as f:
                 for line in f:
                     self.conn.send(line)
         else:
             self.send_message(301)
-
 
     def _put(self,data):
         """
@@ -189,23 +191,34 @@ class Ftp_server():
               :return: MD5
               """
         _filename = data.get('filename')
-        home_dir = r'%s/%s' % (setting.HOME_DIR, self.accounts.get('home'))
+        home_dir = r'%s/%s' % (setting.HOME_DIR, self.accounts.get(self.name, 'home'))
         filename_path = r'%s/%s' % (home_dir, _filename)
+        print('home dir -> %s' % filename_path)
         _size = data.get('size')
         _md5 = data.get('md5')
         if path.exists(filename_path):
             filename2 = filename_path + '.bak'
-            self.write_file(filename2, _size)
-            file_md5 = get_md5
-            if _md5 == file_md5:
-                # 判断Md5
+            new_filename = filename2
         else:
-            self.write_file(filename_path, _size)
+            new_filename = filename_path
+        self.write_file(new_filename, _size)  # 文件写到服务器home目录下
+        self.verify_md5(new_filename, _md5)
 
-            #MD5 判断cd
+    def verify_md5(self, file_path, original_md5):
+        """
+        上传文件MD5 验证
+        :param file_path:
+        :param original_md5:  # 客户端传过来的MD5
+        :return:
+        """
+        new_md5 = get_md5(file_path)  # 在服务器端文件传完之后生成的md5
+        if new_md5 == original_md5:
+            self.send_message(500)  # MD5 检测成功
 
+        else:
+            self.send_message(501)  # MD5 检测失败
 
-    def write_file(self,filename, total_size):
+    def write_file(self, filename, total_size):
         """
         写文件
         :param filename:
@@ -218,6 +231,7 @@ class Ftp_server():
                 f.write(line)
                 recv_size += len(line)
                 print('总大小：%s 已下载大小：%s' % (total_size, recv_size))
+
     def handle_cmd(self,cmd):
         """
         处理系统命令， 比如 cd ,ls
