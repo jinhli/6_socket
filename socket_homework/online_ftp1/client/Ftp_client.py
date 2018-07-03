@@ -24,13 +24,14 @@ python ftp_client -h ip -P 8080 """ # 运行格式
 class Ftp_client():
     def __init__(self):
         parse = optparse.OptionParser()
-        parse.add_option('-s','--server', dest='server',help='ftp server ip_addr')
+        parse.add_option('-s', '--server', dest='server', help='ftp server ip_addr')
         parse.add_option('-P', '--port', type='int', dest='port', help='ftp server port')
         parse.add_option('-u', '--username', dest='username', help='username info')
         parse.add_option('-p', '--password', dest='password', help='password')
         self.options, self.args = parse.parse_args()
         # print(self.options,self.args)
         self.username = None
+        self.current_dir = None
 
     def argv_verification(self):
         if not self.options.server or not self.options.port:
@@ -55,20 +56,23 @@ class Ftp_client():
             response = self.recv_message()
             if response.get('status_code') == 200:
                 self.username = username
+                self.current_dir = response.get('current_dir')
                 return True
             else:
                 print(response.get('status_msg'))
-                count +=1
-
+                count += 1
 
     def interactive(self):
         """处理与ftpserver的所有交互"""
 
         if self.auth():
             while True:
-                user_input = input('[%s]>>:' % self.username).strip()
+                user_input = input('[%s]>>:' % self.current_dir).strip()
                 if not user_input: continue
                 cmd_list = user_input.split()
+                if cmd_list[0] == 'q':
+                    del self.client
+                    break
                 if hasattr(self, '_%s' % cmd_list[0]):
                     func = getattr(self, '_%s' % cmd_list[0])
                     func(cmd_list[1:])
@@ -100,8 +104,7 @@ class Ftp_client():
                 return False
         return True
 
-
-    def _get(self,cmd_args):
+    def _get(self, cmd_args):
         """
         下载文件到客户端
         :return: MD5
@@ -122,13 +125,13 @@ class Ftp_client():
 
             # self.print_data()  #
 
-    def _put(self,cmd_args):
+    def _put(self, cmd_args):
         """
         上传文件到客户端
         :return:
         """
 
-        if self.parameter_check(cmd_args, min_args=1):
+        if self.parameter_check(cmd_args, exact_args=1):
             action_type = 'put'
             _filename = cmd_args[0]
             filename_path = _filename
@@ -146,7 +149,45 @@ class Ftp_client():
                 else:
                     print(response.get('status_msg'))
             else:
-                print('%s does not exist, please check %s file_path is right' % (_filename,filename_path))
+                print('%s does not exist, please check %s file_path is right' % (_filename, filename_path))
+
+    def _ls(self, cmd_args):
+        """
+        ls  后面不加参数
+        :param cmd_args:
+        :return:
+        """
+        if self.parameter_check(cmd_args, exact_args=0):
+            action_type = 'ls'
+            self.send_header(action_type)
+            response = self.recv_message()  # 接收服务器端返回的消息
+            if response.get('status_code') == 302:  # 接受状态码302，当前目录没有文件
+                print(response.get('status_msg'))
+            else:
+                self.print_data(response)  # 接收 目录显示
+
+    def _cd(self, cmd_args):
+        """
+        cd home  -> cmd_args[0]=home
+        :param cmd_args:
+        :return:
+        """
+        if self.parameter_check(cmd_args, exact_args=1):
+            action_type = 'cd'
+            target_dir = cmd_args[0]
+            self.send_header(action_type, target_dir=target_dir)
+            response = self.recv_message()  # 接受服务器端返回的消息
+            if response.get('status_code') == 300:  # 接受状态码300，显示目录切换成功
+                self.current_dir = response.get('current_dir')
+                self.print_data(response)  # 显示目录切换
+
+
+            else:
+                print(response.get('status_msg'))  # 打印当前目录不存在
+
+
+
+
 
     def send_header(self, action_type, **kwargs):  # 报头发布信息，防止粘包
         """
@@ -195,6 +236,7 @@ class Ftp_client():
         :param header_dict:
         :return:
         """
+        # print('调试--》%s' % header_dict)
         total_size = header_dict['size']
         recv_size = 0
         recv_data = b''
@@ -203,7 +245,7 @@ class Ftp_client():
             recv_data += res
             recv_size += len(res)
 
-        print('[%s]>>: % self.username>>', '\n'+ recv_data.decode('utf-8')) # 优化下 就可以仿照登陆用户的组目录显示 [bonnie@bonnie]>>
+        print('[%s]>>:' % header_dict['current_dir'], '\n' + recv_data.decode('utf-8'))  # 优化下 就可以仿照登陆用户的组目录显示 [bonnie@bonnie]>>
 
     def verify_md5(self, file_path, original_md5):
         """

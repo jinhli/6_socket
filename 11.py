@@ -80,13 +80,25 @@
 # print(res)
 
 
+# import os
+#
+# home_dir = r'/home/bonnie/python_learning/pycharm_project/6_socket/socket_homework/online_ftp1/server/home/server/bonnie/3.pdf'
+#
+# home_dir2= r'/home/bonnie/python_learning/pycharm_project/6_socket/socket_homework/online_ftp1/server/home/bonnie/3.pdf'
+#
+# if os.path.exists(home_dir):
+#     print(1)
+# else:
+#     print(2)
 import os
 
-home_dir = r'/home/bonnie/python_learning/pycharm_project/6_socket/socket_homework/online_ftp1/server/home/server/bonnie/3.pdf'
+home_path = r'/root/PycharmProjects/6_socket/socket_homework/online_ftp1/server/home/bonnie/11'
+home_dir = r'/root/PycharmProjects/6_socket/'
 
-home_dir2= r'/home/bonnie/python_learning/pycharm_project/6_socket/socket_homework/online_ftp1/server/home/bonnie/3.pdf'
-
-if os.path.exists(home_dir):
-    print(1)
+if home_path.startswith(home_dir):
+    print('yes')
 else:
-    print(2)
+    print('no')
+
+# res = os.path.abspath(home_path)
+# print(res)
